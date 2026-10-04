@@ -21,6 +21,7 @@ jobs:
       - name: Install workspace
         run: pnpm install --frozen-lockfile
       - name: Read installed Next.js guides
+        if: always()
         run: |
           node --input-type=module <<'NODE'
           import fs from "node:fs";
