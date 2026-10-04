@@ -173,7 +173,7 @@ test("deferred liquidation settlement is recorded in borrower history",async({pa
   await supplyAndBorrow(page);
   await send(accounts[0],deployment.mockOracle,abis.mockOracleAbi,"setCurrentPrice",[deployment.mockTBILL,500_000_000_000_000_000n]);
   await send(accounts[0],deployment.mockUSDC,abis.mockUsdcAbi,"mint",[accounts[0],40_000n*10n**6n]);
-  await page.goto("/admin");
+  await page.goto("/admin-simulator");
   await switchAccount(page,0);
   await page.locator("#admin-target").fill(accounts[2]);
   await expect(page.getByRole("button",{name:"Initiate liquidation",exact:true})).toBeEnabled();

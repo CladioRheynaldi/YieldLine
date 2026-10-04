@@ -19,7 +19,7 @@ Reads that fail never become a fabricated live zero balance. Writes require a va
 
 ## 3. Contract read agreement
 
-Use the generated ABIs in `packages/shared/src/generated/abis.ts`. Person 1 exposes `currentDebt`, `debtShares`, `borrowRateBps`, `supplyRateBps`, `rateAnchorIndex` and `DEBT_DENOMINATOR`. Pool reads include `totalAssets`, `availableLiquidity`, `totalBorrowed`, `badDebt`, `convertToAssets`, `balanceOf` and `maxWithdraw`.
+Use the generated ABIs in `packages/shared/src/generated/abis.ts`. Person 1 exposes `currentDebt`, `debtShares`, `borrowRateBps`, `supplyRateBps`, `rateAnchorIndex` and `DEBT_DENOMINATOR`. Pool reads include `totalAssets`, `availableLiquidity`, `totalBorrowed`, `totalBadDebt`, `convertToAssets`, `balanceOf` and `maxWithdraw`.
 
 Protocol reads share a block number refreshed every ten seconds. Oracle age uses that block's timestamp, including when Anvil time is advanced. Amounts remain bigint until display formatting; MockUSDC uses six decimals, MockTBILL eighteen and rates basis points.
 
