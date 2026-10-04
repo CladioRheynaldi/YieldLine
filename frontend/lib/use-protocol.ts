@@ -198,6 +198,7 @@ export function useProtocol(): ProtocolView {
 
   const user = useReadContracts({
     allowFailure: false,
+    blockNumber,
     query,
     contracts: [
       { address: contracts.creditVault, abi: creditVaultAbi, functionName: "getPosition", args: [account, tbill], chainId: chain.id },

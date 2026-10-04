@@ -153,3 +153,50 @@ Do not store private key material.
 ## 11. Faucet/gas
 
 Use official or reputable testnet faucet/bridge resources referenced by Arbitrum documentation. Testnet availability changes, so do not make the repository depend on a single faucet URL.
+
+## 12. Run the current repository script
+
+Sepolia deployment remains pending. Receiving Anvil funds does not fund Arbitrum Sepolia. Check the deployer on the target network:
+
+```bash
+cast chain-id --rpc-url https://sepolia-rollup.arbitrum.io/rpc
+cast balance YOUR_DEPLOYER_ADDRESS --rpc-url https://sepolia-rollup.arbitrum.io/rpc --ether
+```
+
+Expected chain ID: 421614. Use a testnet-only deployer. Enter its key locally in Ubuntu/WSL without printing it or putting it in shell history:
+
+```bash
+export ARBITRUM_SEPOLIA_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
+read -rsp "Testnet deployer private key: " DEPLOYER_PRIVATE_KEY
+printf '\n'
+export DEPLOYER_PRIVATE_KEY
+```
+
+Optional: export `DEMO_LENDER` and `DEMO_BORROWER` with the two wallet addresses before deployment. Without them the script seeds both token balances to the deployer.
+
+First simulate, then deploy without requiring an explorer API key:
+
+```bash
+cd contracts
+forge script script/DeployYieldLine.s.sol --rpc-url arbitrum_sepolia
+forge script script/DeployYieldLine.s.sol --rpc-url arbitrum_sepolia --broadcast
+cd ..
+node scripts/sync-deployments.mjs
+unset DEPLOYER_PRIVATE_KEY
+```
+
+The script creates `deployments/arbitrum-sepolia.json` and the sync command updates the shared frontend addresses. Source verification is a separate step; `pnpm deploy:sepolia` already includes `--verify` and requires the configured `ARBISCAN_API_KEY`.
+
+Set `NEXT_PUBLIC_YIELDLINE_NETWORK=arbitrumSepolia` and the public Sepolia RPC in `frontend/.env.local`, then restart or rebuild the frontend. Read [26_FRONTEND_ANALYTICS.md](26_FRONTEND_ANALYTICS.md) for configuration and demo checks.
+
+## 13. Verify Person 1 before deployment
+
+```bash
+npm install --prefix contracts --ignore-scripts --package-lock=false
+forge test --root contracts --match-contract InterestAccountingTest -vv
+forge test --root contracts -vv
+```
+
+The focused suite has 21 tests; the complete suite has 113. A passing suite demonstrates the tested accounting behaviors without spending testnet ETH.
+
+For the visual interest demo, start with Anvil: supply 100,000 MockUSDC, borrow 50,000, advance one year, refresh the oracle, inspect current debt and lender assets, mint enough MockUSDC for the interest and repay. Expected debt is about 53,500; economic pool assets about 103,500; available cash before repayment about 50,000. Time travel is available locally, not on public Arbitrum Sepolia.
