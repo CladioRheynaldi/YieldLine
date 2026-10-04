@@ -26,14 +26,18 @@
 - [ ] admin simulator
 - [ ] scenario test suite
 
+P0 checkboxes above are the original checklist and have not been re-audited here. A fresh Arbitrum Sepolia deployment and extension-wallet validation remain pending.
+
 ## P1 — Strong demo enhancements
 
 - [x] variable utilization-based APR — onchain Person 1 implementation
 - [x] interest index — live debt, lender receivables, repayment and settlement
-- [ ] partial collateral withdrawal
-- [ ] transaction history from events
-- [ ] production OpenEden read-only panel
-- [ ] explorer links
+- [x] lender analytics — current shares/cash and event-backed cash flows
+- [x] frontend interest and APR reads — Person 1 ABI integration
+- [x] partial collateral withdrawal — existing contract and frontend action
+- [x] transaction history from events — paginated wallet history and explicit RPC states
+- [x] production OpenEden read-only panel — separate Arbitrum One reads; stale/unavailable states
+- [x] explorer links — confirmed history and wallet actions
 - [ ] risk breakdown visualization
 - [ ] one-click demo scenario presets
 - [ ] contract source verification

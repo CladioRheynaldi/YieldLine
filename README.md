@@ -103,6 +103,7 @@ yieldline/
 | `22_REFERENCES.md` | Primary documentation links |
 | `24_INTEREST_ACCOUNTING.md` | Implemented rates, rounding, lender assets and worked example |
 | `25_INTEREST_TESTING.md` | Interest tests, simulated time and ABI export |
+| `26_FRONTEND_ANALYTICS.md` | Live financial reads, history, reference data and deployment configuration |
 
 ## Getting started
 
@@ -141,13 +142,14 @@ Without a deployment the frontend runs on the documented demo scenario and label
 
 The original build-order phases 1–9 are implemented. Person 1 adds onchain interest,
 a utilization-based borrow APR, current-debt risk checks, interest-aware ERC-4626
-shares, and accrued-debt settlement. The Lend page still needs Person 2's live-rate
-integration. The production-reference panel remains backlog. Testnet deployment
+shares, and accrued-debt settlement. Person 2 adds live contract rates/debt, lender analytics, transaction history and a
+separate read-only OpenEden reference panel. Testnet deployment
 needs a funded deployer key and a fresh deployment of these non-upgradeable contracts.
 
 Start with [24_INTEREST_ACCOUNTING.md](24_INTEREST_ACCOUNTING.md) for the worked
 example and [25_INTEREST_TESTING.md](25_INTEREST_TESTING.md) for commands.
-GitHub Actions runs the contracts independently of the frontend.
+See [26_FRONTEND_ANALYTICS.md](26_FRONTEND_ANALYTICS.md) for frontend setup and limitations.
+GitHub Actions runs contract tests and frontend unit, build and browser checks.
 
 ## Definition of MVP success
 

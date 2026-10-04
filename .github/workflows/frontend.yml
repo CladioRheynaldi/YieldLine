@@ -56,6 +56,10 @@ jobs:
         run: |
           cd frontend/tests/browser
           npx playwright test
+      - name: Mobile screenshot for review
+        if: always()
+        run: |
+          node --input-type=module -e "import fs from 'node:fs'; const p='frontend/tests/browser/test-results/mobile-markets.png'; if(fs.existsSync(p)) console.log('MOBILE_PNG_BASE64='+fs.readFileSync(p).toString('base64'));"
       - name: Browser traces and screenshots
         if: always()
         uses: actions/upload-artifact@v4

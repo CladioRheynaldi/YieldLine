@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { encodeFunctionData } from "viem";
+import { encodeFunctionData, decodeFunctionResult } from "viem";
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../../..");
 const deployment=JSON.parse(fs.readFileSync(path.join(root,"deployments/anvil.json"),"utf8"));
@@ -21,6 +21,11 @@ async function send(from,address,abi,functionName,args) {
   expect(receipt.status).toBe("0x1");
   return hash;
 }
+async function read(address,abi,functionName,args=[]) {
+  const result=await rpc('eth_call',[{to:address,data:encodeFunctionData({abi,functionName,args})},'latest']);
+  return decodeFunctionResult({abi,functionName,data:result});
+}
+const usd=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(value)/1e6);
 let accounts;
 let snapshot;
 test.beforeEach(async()=>{accounts=await rpc("eth_accounts");snapshot=await rpc("evm_snapshot");});
@@ -86,6 +91,11 @@ test("lender and borrower complete UI workflows, interest reads and real history
   await send(accounts[0],deployment.mockUSDC,abis.mockUsdcAbi,"mint",[accounts[2],10_000n*10n**6n]);
   await send(accounts[0],deployment.mockOracle,abis.mockOracleAbi,"setCurrentPrice",[deployment.mockTBILL,1_050_000_000_000_000_000n]);
   await page.reload();
+  await switchAccount(page,2);
+  const debt=await read(deployment.creditVault,abis.creditVaultAbi,"currentDebt",[accounts[2],deployment.mockTBILL]);
+  expect(debt).toBeGreaterThanOrEqual(53_500n*10n**6n);
+  expect(debt).toBeLessThan(53_501n*10n**6n);
+  await expect(page.locator(".metric").filter({has:page.getByText("Debt",{exact:true})}).locator("strong")).toHaveText(usd(debt));
   await expect(page.getByRole("button",{name:"Approve balance & repay all"})).toBeEnabled();
   const full=page.getByRole("button",{name:"Approve balance & repay all"});
   await full.click();
@@ -98,6 +108,10 @@ test("lender and borrower complete UI workflows, interest reads and real history
   await switchAccount(page,1);
   await page.getByRole("link",{name:"Lend",exact:true}).first().click();
   await expect(page.getByText("Current share value",{exact:true})).toBeVisible();
+  const shares=await read(deployment.liquidityVault,abis.liquidityVaultAbi,"balanceOf",[accounts[1]]);
+  const shareValue=await read(deployment.liquidityVault,abis.liquidityVaultAbi,"convertToAssets",[shares]);
+  await expect(page.locator(".key-values > div").filter({has:page.getByText("Current share value",{exact:true})}).locator("dd")).toHaveText(usd(shareValue));
+  expect(shareValue).toBeGreaterThan(103_499n*10n**6n);
   const redeem=page.locator("form").filter({has:page.getByRole("heading",{name:"Withdraw liquidity",exact:true})});
   await redeem.getByRole("button",{name:"Max",exact:true}).click();
   await redeem.locator('button[type="submit"]').click();
@@ -153,4 +167,22 @@ test("mobile layout and unavailable production data stay distinct from mock posi
   await expect(panel.getByRole("button",{name:/deposit|borrow|approve|redeem/i})).toHaveCount(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
   await page.screenshot({path:"test-results/mobile-markets.png",fullPage:true});
+});
+
+test("deferred liquidation settlement is recorded in borrower history",async({page})=>{
+  await supplyAndBorrow(page);
+  await send(accounts[0],deployment.mockOracle,abis.mockOracleAbi,"setCurrentPrice",[deployment.mockTBILL,500_000_000_000_000_000n]);
+  await send(accounts[0],deployment.mockUSDC,abis.mockUsdcAbi,"mint",[accounts[0],40_000n*10n**6n]);
+  await page.goto("/admin");
+  await switchAccount(page,0);
+  await page.locator("#admin-target").fill(accounts[2]);
+  await expect(page.getByRole("button",{name:"Initiate liquidation",exact:true})).toBeEnabled();
+  await page.getByRole("button",{name:"Initiate liquidation",exact:true}).click();
+  await expect(page.getByText("Confirmed onchain.").first()).toBeVisible();
+  await form(page,"Settle redemption","40000");
+  await page.getByRole("link",{name:"Position",exact:true}).first().click();
+  await switchAccount(page,2);
+  await expect(page.getByText("Liquidation initiated",{exact:true})).toBeVisible();
+  await expect(page.getByText("Liquidation settled",{exact:true})).toBeVisible();
+  expect(await read(deployment.creditVault,abis.creditVaultAbi,"currentDebt",[accounts[2],deployment.mockTBILL])).toBe(0n);
 });

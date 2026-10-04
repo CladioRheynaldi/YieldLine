@@ -1,6 +1,6 @@
 # Documentation Manifest
 
-Total Markdown files: **27**
+Total Markdown files: **28**
 
 - `01_PRODUCT_REQUIREMENTS.md`
 - `02_SYSTEM_ARCHITECTURE.md`
@@ -27,5 +27,6 @@ Total Markdown files: **27**
 - `23_BUILD_ORDER.md`
 - `24_INTEREST_ACCOUNTING.md`
 - `25_INTEREST_TESTING.md`
+- `26_FRONTEND_ANALYTICS.md`
 - `README.md`
 - `MANIFEST.md`
