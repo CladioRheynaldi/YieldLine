@@ -18,6 +18,10 @@ CollateralDeposited
 CollateralWithdrawn
 Borrowed
 Repaid
+InterestAccrued
+BorrowRateUpdated
+RepaymentRecorded
+BadDebtRecognized
 LiquidationInitiated
 LiquidationSettled
 AssetConfigUpdated
@@ -129,3 +133,9 @@ contracts = source of truth
 index = derived read model
 frontend cache = disposable
 ```
+
+## 9. Interest read model
+
+Debt grows between events. Query current debt and the current borrow index when rendering a position; a cached last-event debt value becomes stale even without a transaction.
+
+`InterestAccrued(index, receivables)` records a checkpoint. `BorrowRateUpdated(rateBps, utilization)` records the rate used for the next economic interval. The supplied ABIs contain the exact signatures.

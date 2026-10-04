@@ -35,6 +35,7 @@ A position in `LIQUIDATION_PENDING`:
 - cannot withdraw collateral
 - accepts borrower repayment before settlement; repaying the debt in full cures the position
   (`LIQUIDATION_PENDING -> ACTIVE`, event `LiquidationCured`) so collateral is not burned
+- continues accruing interest until repayment or settlement
 - waits for authorized settlement action
 
 ## 3. Liquidation eligibility
@@ -90,8 +91,8 @@ Let:
 
 ```text
 S = settlement proceeds in USDC
-D = debt
-F = liquidation fee/cost
+D = current debt, including interest through settlement
+F = liquidation fee/cost (zero in the implemented demo)
 ```
 
 Then:
@@ -115,7 +116,9 @@ If:
 S < D
 ```
 
-there is bad debt.
+there is bad debt. The liquidity vault removes the unpaid debt shares and records the resulting aggregate receivable reduction, including uncollected interest. It does not subtract that loss a second time from assets.
+
+The implemented fund flow and bounded debt rounding are documented in [24_INTEREST_ACCOUNTING.md](24_INTEREST_ACCOUNTING.md).
 
 ## 7. Bad debt
 

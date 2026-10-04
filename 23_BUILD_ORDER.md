@@ -1,6 +1,6 @@
 # Exact Build Order
 
-Use this if you want to turn the documentation into code with minimal rework.
+This is the original implementation sequence. The subsequent Person 1 interest task is documented in [24_INTEREST_ACCOUNTING.md](24_INTEREST_ACCOUNTING.md) and [25_INTEREST_TESTING.md](25_INTEREST_TESTING.md); it is separate from this guide's Phase 1 contract skeleton.
 
 ## Phase 1 — Contract skeleton
 
@@ -70,7 +70,7 @@ repayment
 borrowed accounting
 ```
 
-Do not add variable interest yet.
+The original build introduced principal accounting here. Person 1 now extends it with the shared interest index and utilization-based APR.
 
 ## Phase 6 — Credit
 
@@ -147,7 +147,6 @@ Only now add:
 
 ```text
 live production reference data
-variable APR
 charts
 indexer
 Stylus

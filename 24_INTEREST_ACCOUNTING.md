@@ -92,7 +92,7 @@ Repayment converts receivables into cash. It does not add the same interest to a
 
 Bad debt removes outstanding debt shares and reduces receivables immediately. `totalBadDebt` records cumulative gross receivable write-offs, including uncollected interest; it is not subtracted again from `totalAssets()`.
 
-`maxWithdraw` is capped by both the lender's economic claim and vault cash. `maxRedeem` uses a conservative floor conversion of available cash, preventing a ceiling conversion from permitting an unfunded redemption. That conservative bound can leave less than one base unit of otherwise redeemable cash.
+`maxWithdraw` is capped by both the lender's economic claim and vault cash. `maxRedeem` uses a conservative floor conversion of available cash, preventing a ceiling conversion from permitting an unfunded redemption. That conservative bound can leave one base unit of otherwise redeemable cash in the demo's share-price range.
 
 ERC-4626 virtual assets/shares can leave one base unit of rounding dust on a complete lender exit.
 

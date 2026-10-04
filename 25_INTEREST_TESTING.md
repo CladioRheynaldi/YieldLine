@@ -139,3 +139,14 @@ Read `currentDebt`, `totalBorrowed`, `totalAssets`, and `availableLiquidity`. Th
 Approve enough MockUSDC for the current debt, then call `repayAll`. Interest needs real mock-token cash, so fund the demo borrower explicitly through the faucet/admin mint.
 
 A year-old NAV will be stale. Refresh the mock oracle before demonstrating a new borrow or collateral withdrawal with remaining debt.
+
+## 10. Verified result
+
+[GitHub Actions run 37200086523](https://github.com/CladioRheynaldi/YieldLine/actions/runs/37200086523) tested contract commit `dcbbc856621be173986ad3915e62b6b4275d6f33`:
+
+- 113 tests passed; zero failed or skipped
+- 21 focused interest tests included
+- invariant campaign: 64 runs, 12,800 actions, zero handler reverts
+- all nine ABIs exported from the compiled Foundry artifacts
+
+The workflow also checks that committed ABIs match a fresh build. Local shell execution in the authoring session was unavailable; the recorded validation ran on GitHub's Ubuntu runner.

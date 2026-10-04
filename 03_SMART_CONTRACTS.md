@@ -200,6 +200,7 @@ Responsibilities:
 - repayment
 - available-liquidity reporting
 - utilization reporting
+- shared debt index, interest receivables, and current rate reads
 
 Authorization:
 
@@ -220,8 +221,7 @@ Storage:
 ```solidity
 struct Position {
     uint256 collateralAmount;
-    uint256 debtPrincipal;
-    uint256 debtIndexSnapshot;
+    uint256 debtAmount; // checkpoint cache; external reads return live debt
     PositionStatus status;
 }
 ```
@@ -248,19 +248,19 @@ Core actions:
 
 ## 10. Interest accounting
 
-For the workshop, choose one approach and keep it consistent.
+Implemented:
 
-Recommended:
+- one global borrow index maintained by the liquidity vault
+- debt shares per borrower and collateral asset in the credit vault
+- a 3% base APR plus an 8% utilization slope
+- current debt and earned lender receivables available through view functions
+- checkpoints before debt, cash, and risk-sensitive actions
+- interest included in repayment, liquidation eligibility, settlement, and bad debt
+- zero protocol fee in the demo
 
-- global borrow index
-- debt shares or normalized debt
-- update index on state-changing interactions
+Permissionless accrual does not reset the rate interval. No borrower iteration or per-second loops are required.
 
-Simpler fallback:
-
-- calculate simple interest from `lastAccruedAt`
-
-Avoid per-second loops.
+See [24_INTEREST_ACCOUNTING.md](24_INTEREST_ACCOUNTING.md) for the final formulas and rounding rules.
 
 ## 11. Access control
 
@@ -329,7 +329,7 @@ At minimum:
 - collateral deposit/withdrawal
 - borrow
 - repay
-- interest accrual checkpoint if useful
+- interest accrual checkpoint and rate updates
 - liquidation initiated/settled
 - asset config changed
 - eligibility changed

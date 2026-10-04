@@ -27,11 +27,8 @@ jobs:
         run: forge test --root contracts -vv
       - name: Export compiled ABIs
         run: node scripts/export-abis.mjs
-      - name: Print compiled ABI source for reproducible export
-        run: |
-          echo ABI_EXPORT_BEGIN
-          cat packages/shared/src/generated/abis.ts
-          echo ABI_EXPORT_END
+      - name: Verify committed ABIs match compiled contracts
+        run: git diff --exit-code -- packages/shared/src/generated/abis.ts
       - uses: actions/upload-artifact@v4
         with:
           name: compiled-contracts-and-abis

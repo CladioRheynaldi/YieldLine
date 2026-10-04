@@ -227,3 +227,9 @@ Before demo, every function that moves value must have:
 - success test
 - authorization failure test
 - key boundary failure test
+
+## Interest accounting validation
+
+`InterestAccounting.t.sol` adds 21 focused tests, including two fuzz tests. The protocol handler also advances time during invariant campaigns. Existing happy-path repayment now explicitly funds accrued interest and verifies lender yield.
+
+See [25_INTEREST_TESTING.md](25_INTEREST_TESTING.md) for commands and requirement-to-test mapping.
