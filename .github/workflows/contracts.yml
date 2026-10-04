@@ -1,0 +1,40 @@
+name: Smart contract tests
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      - name: Install contract dependencies
+        run: npm install --prefix contracts --ignore-scripts --package-lock=false
+      - name: Build
+        run: forge build --root contracts
+      - name: All contract tests (including fuzz and invariants)
+        run: forge test --root contracts -vv
+      - name: Export compiled ABIs
+        run: node scripts/export-abis.mjs
+      - name: Print compiled ABI source for reproducible export
+        run: |
+          echo ABI_EXPORT_BEGIN
+          cat packages/shared/src/generated/abis.ts
+          echo ABI_EXPORT_END
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compiled-contracts-and-abis
+          path: |
+            contracts/out
+            packages/shared/src/generated/abis.ts

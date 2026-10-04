@@ -42,6 +42,7 @@ contract RWACreditVault is AccessControl, Pausable, ReentrancyGuard {
 
     mapping(address borrower => mapping(address asset => Position)) private _positions;
     mapping(address asset => uint256 amount) public totalCollateralByAsset;
+    mapping(address borrower => mapping(address asset => uint256 shares)) public debtShares;
 
     event CollateralDeposited(address indexed borrower, address indexed asset, uint256 amount);
     event CollateralWithdrawn(address indexed borrower, address indexed asset, uint256 amount);
@@ -142,7 +143,9 @@ contract RWACreditVault is AccessControl, Pausable, ReentrancyGuard {
         Position storage position = _positions[msg.sender][asset];
         if (position.status != PositionStatus.ACTIVE) revert PositionNotActive();
 
-        uint256 debtAfter = position.debtAmount + amount;
+        _accruePosition(msg.sender, asset);
+        uint256 shares = liquidityVault.sharesForDebt(amount);
+        uint256 debtAfter = liquidityVault.debtForShares(debtShares[msg.sender][asset] + shares);
         IRWARiskEngine.RiskResult memory risk =
             riskEngine.evaluate(msg.sender, asset, position.collateralAmount, debtAfter);
         if (!risk.oracleValid) revert OracleInvalid();
@@ -151,6 +154,7 @@ contract RWACreditVault is AccessControl, Pausable, ReentrancyGuard {
         if (risk.debtValue > risk.borrowCapacity) revert InsufficientCollateral();
 
         position.debtAmount = debtAfter;
+        debtShares[msg.sender][asset] += shares;
         liquidityVault.lendTo(msg.sender, amount);
         emit Borrowed(msg.sender, asset, amount, debtAfter);
     }
@@ -163,22 +167,25 @@ contract RWACreditVault is AccessControl, Pausable, ReentrancyGuard {
                 && position.status != PositionStatus.LIQUIDATION_PENDING
         ) revert PositionNotActive();
 
-        paid = amount > position.debtAmount ? position.debtAmount : amount;
-        if (paid == 0) revert ZeroAmount();
+        _accruePosition(msg.sender, asset);
+        uint256 sharesBurned;
+        (paid, sharesBurned) = liquidityVault.previewRepayment(debtShares[msg.sender][asset], amount);
+        if (paid == 0 || sharesBurned == 0) revert ZeroAmount();
 
-        position.debtAmount -= paid;
+        debtShares[msg.sender][asset] -= sharesBurned;
+        position.debtAmount = liquidityVault.debtForShares(debtShares[msg.sender][asset]);
         if (position.status == PositionStatus.LIQUIDATION_PENDING && position.debtAmount == 0) {
             // A borrower who repays in full before settlement keeps their collateral.
             position.status = PositionStatus.ACTIVE;
             emit LiquidationCured(msg.sender, asset);
         }
         settlementToken.safeTransferFrom(msg.sender, address(liquidityVault), paid);
-        liquidityVault.recordRepayment(paid);
+        liquidityVault.recordRepayment(paid, sharesBurned);
         emit Repaid(msg.sender, asset, paid, position.debtAmount);
     }
 
     function repayAll(address asset) external returns (uint256 paid) {
-        paid = repay(asset, _positions[msg.sender][asset].debtAmount);
+        paid = repay(asset, type(uint256).max);
     }
 
     function withdrawCollateral(address asset, uint256 amount) external nonReentrant {
@@ -191,6 +198,7 @@ contract RWACreditVault is AccessControl, Pausable, ReentrancyGuard {
         if (position.status != PositionStatus.ACTIVE) revert PositionNotActive();
         if (amount > position.collateralAmount) revert InsufficientCollateral();
 
+        _accruePosition(msg.sender, asset);
         uint256 collateralAfter = position.collateralAmount - amount;
         if (position.debtAmount != 0) {
             IRWARiskEngine.RiskResult memory risk =
@@ -210,10 +218,11 @@ contract RWACreditVault is AccessControl, Pausable, ReentrancyGuard {
         emit CollateralWithdrawn(msg.sender, asset, amount);
     }
 
-    function initiateLiquidation(address borrower, address asset) external {
+    function initiateLiquidation(address borrower, address asset) external nonReentrant {
         Position storage position = _positions[borrower][asset];
         if (position.status != PositionStatus.ACTIVE) revert PositionNotActive();
 
+        _accruePosition(borrower, asset);
         IRWARiskEngine.RiskResult memory risk =
             riskEngine.evaluate(borrower, asset, position.collateralAmount, position.debtAmount);
         if (!risk.liquidatable) revert NotLiquidatable();
@@ -232,14 +241,20 @@ contract RWACreditVault is AccessControl, Pausable, ReentrancyGuard {
             revert PositionNotInLiquidation();
         }
 
+        _accruePosition(borrower, asset);
+        uint256 shares = debtShares[borrower][asset];
         uint256 debt = position.debtAmount;
         uint256 collateral = position.collateralAmount;
-        uint256 debtRepaid = settlementAmount > debt ? debt : settlementAmount;
-        uint256 surplus = settlementAmount > debt ? settlementAmount - debt : 0;
+        (uint256 debtRepaid, uint256 sharesRepaid) =
+            liquidityVault.previewRepayment(shares, settlementAmount);
+        // Sub-unit rounding proceeds are returned, rather than retained without
+        // retiring a corresponding borrower liability.
+        uint256 surplus = settlementAmount - debtRepaid;
         uint256 badDebt = debt - debtRepaid;
 
         position.collateralAmount = 0;
         position.debtAmount = 0;
+        debtShares[borrower][asset] = 0;
         position.status = PositionStatus.CLOSED;
         totalCollateralByAsset[asset] -= collateral;
 
@@ -248,9 +263,9 @@ contract RWACreditVault is AccessControl, Pausable, ReentrancyGuard {
         }
         if (debtRepaid != 0) {
             settlementToken.safeTransfer(address(liquidityVault), debtRepaid);
-            liquidityVault.recordRepayment(debtRepaid);
+            liquidityVault.recordRepayment(debtRepaid, sharesRepaid);
         }
-        if (badDebt != 0) liquidityVault.recognizeBadDebt(badDebt);
+        if (shares > sharesRepaid) liquidityVault.recognizeBadDebt(shares - sharesRepaid);
         if (surplus != 0) settlementToken.safeTransfer(borrower, surplus);
         if (collateral != 0) IBurnableCollateral(asset).burn(collateral);
 
@@ -258,7 +273,9 @@ contract RWACreditVault is AccessControl, Pausable, ReentrancyGuard {
     }
 
     function getPosition(address borrower, address asset) external view returns (Position memory) {
-        return _positions[borrower][asset];
+        Position memory position = _positions[borrower][asset];
+        position.debtAmount = liquidityVault.debtForShares(debtShares[borrower][asset]);
+        return position;
     }
 
     function getAccountRisk(address borrower, address asset)
@@ -267,7 +284,18 @@ contract RWACreditVault is AccessControl, Pausable, ReentrancyGuard {
         returns (IRWARiskEngine.RiskResult memory)
     {
         Position memory position = _positions[borrower][asset];
+        position.debtAmount = liquidityVault.debtForShares(debtShares[borrower][asset]);
         return riskEngine.evaluate(borrower, asset, position.collateralAmount, position.debtAmount);
+    }
+
+    function currentDebt(address borrower, address asset) external view returns (uint256) {
+        return liquidityVault.debtForShares(debtShares[borrower][asset]);
+    }
+
+    function _accruePosition(address borrower, address asset) private {
+        liquidityVault.accrueInterest();
+        _positions[borrower][asset].debtAmount =
+            liquidityVault.debtForShares(debtShares[borrower][asset]);
     }
 
     function _requireSupported(address asset)

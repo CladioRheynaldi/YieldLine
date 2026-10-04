@@ -97,7 +97,7 @@ contract USDCLiquidityVaultTest is YieldLineFixture {
 
         vm.prank(BORROWER);
         vm.expectRevert(expected);
-        liquidityVault.recordRepayment(1e6);
+        liquidityVault.recordRepayment(1e6, 1e6);
 
         vm.prank(BORROWER);
         vm.expectRevert(expected);
@@ -109,7 +109,7 @@ contract USDCLiquidityVaultTest is YieldLineFixture {
         liquidityVault.grantRole(liquidityVault.CREDIT_VAULT_ROLE(), address(this));
 
         vm.expectRevert(USDCLiquidityVault.InvalidAccountingAmount.selector);
-        liquidityVault.recordRepayment(1);
+        liquidityVault.recordRepayment(1, 1);
 
         vm.expectRevert(USDCLiquidityVault.InvalidAccountingAmount.selector);
         liquidityVault.recognizeBadDebt(1);
