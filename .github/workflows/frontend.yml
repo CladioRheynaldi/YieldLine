@@ -9,6 +9,10 @@ permissions:
 jobs:
   frontend:
     runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_YIELDLINE_NETWORK: anvil
+      NEXT_PUBLIC_ANVIL_RPC_URL: http://127.0.0.1:8545
     steps:
       - uses: actions/checkout@v4
         with:
@@ -16,32 +20,48 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
       - name: Install pinned package manager
         run: npm install --global pnpm@11.25.0
       - name: Install workspace
         run: pnpm install --frozen-lockfile
-      - name: Read installed Next.js guides
-        if: always()
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from "node:fs";
-          import path from "node:path";
-          const root = "frontend/node_modules/next/dist/docs";
-          function walk(p) {
-            return fs.readdirSync(p, {withFileTypes:true}).flatMap(d =>
-              d.isDirectory() ? walk(path.join(p,d.name)) : [path.join(p,d.name)]);
-          }
-          for (const p of walk(root).filter(p => /route-handlers|server-and-client-components|fetching-data|environment-variables/.test(p)).slice(0,8)) {
-            console.log("NEXT_GUIDE_BEGIN "+p);
-            console.log(fs.readFileSync(p,"utf8").slice(0,20000));
-            console.log("NEXT_GUIDE_END");
-          }
-          NODE
+      - name: Analytics and reference unit tests
+        run: node --test frontend/tests/accounting.test.mjs
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint
         run: pnpm lint
-      - name: Production build
+      - name: Deploy isolated Anvil fixture
         env:
-          NEXT_TELEMETRY_DISABLED: "1"
+          DEPLOYER_PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+          DEMO_LENDER: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+          DEMO_BORROWER: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+        run: |
+          anvil --silent > /tmp/yieldline-anvil.log 2>&1 &
+          for attempt in {1..20}; do
+            if cast block-number --rpc-url http://127.0.0.1:8545; then break; fi
+            sleep 1
+          done
+          pnpm deploy:anvil
+      - name: Production build
         run: pnpm build
+      - name: Install isolated browser test tools
+        run: |
+          npm install --prefix frontend/tests/browser --ignore-scripts --package-lock=false
+          cd frontend/tests/browser
+          npx playwright install --with-deps chromium
+      - name: Browser wallet workflows and mobile checks
+        run: |
+          cd frontend/tests/browser
+          npx playwright test
+      - name: Browser traces and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-browser-results
+          if-no-files-found: ignore
+          path: |
+            frontend/tests/browser/test-results
+            frontend/tests/browser/playwright-report

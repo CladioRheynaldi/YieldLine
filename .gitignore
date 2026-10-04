@@ -20,3 +20,6 @@ deployments/*.local.json
 *.log
 .DS_Store
 Thumbs.db
+
+frontend/tests/browser/test-results/
+frontend/tests/browser/playwright-report/

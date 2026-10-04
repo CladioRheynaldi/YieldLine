@@ -35,7 +35,7 @@ export function OpenEdenReference() {
       <div><dt>TBILL vault</dt><dd><a href={"https://arbiscan.io/address/"+reference.vault} target="_blank" rel="noreferrer">{shortAddress(reference.vault)} ↗</a></dd></div>
       <div><dt>Price oracle</dt><dd><a href={"https://arbiscan.io/address/"+reference.oracle} target="_blank" rel="noreferrer">{shortAddress(reference.oracle)} ↗</a></dd></div>
     </dl>
-    <p className="field-message">NAV age above 72 hours is flagged for this reference display; this is not OpenEden's redemption policy. This panel does not publish an inferred yield or convert token supply into claimed TVL.</p>
+    <p className="field-message">NAV age above 72 hours is flagged for this reference display; this display threshold does not define the issuer redemption policy. This panel does not publish an inferred yield or convert token supply into claimed TVL.</p>
     <div className="button-row">
       <a className="button button--quiet" href={reference.source} target="_blank" rel="noreferrer">Official address source ↗</a>
       <button className="button button--quiet" disabled={query.isFetching} onClick={() => void query.refetch()}>Refresh reference</button>

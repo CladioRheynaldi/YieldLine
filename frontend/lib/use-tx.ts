@@ -63,6 +63,7 @@ export function useTx() {
           hash = await writeContract(config, request);
           setState({ status: "confirming", ...base, hash });
           const receipt = await waitForTransactionReceipt(config, { hash, chainId: chain.id });
+          hash = receipt.transactionHash;
           if (receipt.status !== "success") throw new Error(`${step.label} reverted onchain.`);
         }
         setState({ status: "success", hash: hash! });
