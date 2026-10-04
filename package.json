@@ -1,0 +1,22 @@
+{
+  "name": "yieldline",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev": "pnpm --filter @yieldline/frontend dev",
+    "build": "pnpm --filter @yieldline/shared typecheck && pnpm --filter @yieldline/frontend build",
+    "lint": "pnpm --filter @yieldline/frontend lint",
+    "typecheck": "pnpm --filter @yieldline/shared typecheck && pnpm --filter @yieldline/frontend typecheck",
+    "test": "pnpm test:contracts",
+    "test:contracts": "forge test --root contracts",
+    "build:contracts": "forge build --root contracts",
+    "check:solidity": "pnpm --filter @yieldline/contracts compile",
+    "fmt:contracts": "forge fmt --root contracts",
+    "abis": "forge build --root contracts && node scripts/export-abis.mjs",
+    "deployments:sync": "node scripts/sync-deployments.mjs",
+    "anvil": "anvil",
+    "deploy:anvil": "cd contracts && forge script script/DeployYieldLine.s.sol --rpc-url http://127.0.0.1:8545 --broadcast && cd .. && node scripts/sync-deployments.mjs",
+    "deploy:sepolia": "cd contracts && forge script script/DeployYieldLine.s.sol --rpc-url arbitrum_sepolia --broadcast --verify && cd .. && node scripts/sync-deployments.mjs"
+  }
+}

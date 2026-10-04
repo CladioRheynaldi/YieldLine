@@ -1,0 +1,16 @@
+{
+  "chainId": 421614,
+  "deploymentBlock": null,
+  "timestamp": null,
+  "gitCommit": null,
+  "deployer": null,
+  "mockUSDC": null,
+  "mockTBILL": null,
+  "complianceRegistry": null,
+  "mockOracle": null,
+  "oracleAdapter": null,
+  "registry": null,
+  "riskEngine": null,
+  "liquidityVault": null,
+  "creditVault": null
+}

@@ -1,0 +1,9 @@
+{
+  "date": "2026-09-25",
+  "framework": "new Next.js workspace",
+  "fontStack": "Space Grotesk + IBM Plex Sans + JetBrains Mono",
+  "palette": "new Cobalt OKLCH token system",
+  "motion": "motion-cut with command palette and button-state feedback",
+  "spacing": "4pt semantic scale",
+  "source": "first scan; documentation-only repository"
+}
