@@ -79,10 +79,21 @@ contract ProtocolHandler {
         try creditVault.borrow(address(tbill), amount) { } catch { }
     }
 
+    function advanceTime(uint256 elapsed) external {
+        elapsed = _bound(elapsed, 1, 7 days);
+        vm.warp(block.timestamp + elapsed);
+        // Oracle aging is retained; setNav independently refreshes it.
+        liquidityVault.accrueInterest();
+    }
+
     function repay(uint256 amount) external {
         uint256 debt = creditVault.getPosition(borrower, address(tbill)).debtAmount;
         if (debt == 0) return;
         amount = _bound(amount, 1, debt);
+        (uint256 payableAmount,) = liquidityVault.previewRepayment(
+            creditVault.debtShares(borrower, address(tbill)), amount
+        );
+        if (payableAmount == 0) return;
         usdc.mint(borrower, amount);
         usdcMintedByHandler += amount;
         vm.startPrank(borrower);

@@ -29,9 +29,13 @@ contract YieldLineScenarioTest is YieldLineFixture {
         _borrow(50_000e6);
 
         vm.warp(block.timestamp + 12 hours);
+        uint256 accruedDebt = creditVault.currentDebt(BORROWER, address(tbill));
+        uint256 interest = accruedDebt - 50_000e6;
+        // Demo funding is explicit; the protocol never mints repayment money.
+        usdc.mint(BORROWER, interest);
 
         vm.startPrank(BORROWER);
-        usdc.approve(address(creditVault), 50_000e6);
+        usdc.approve(address(creditVault), accruedDebt);
         creditVault.repayAll(address(tbill));
         creditVault.withdrawCollateral(address(tbill), 100_000e18);
         vm.stopPrank();
@@ -40,11 +44,12 @@ contract YieldLineScenarioTest is YieldLineFixture {
         assertEq(uint256(position.status), uint256(RWACreditVault.PositionStatus.CLOSED), "closed");
         assertEq(tbill.balanceOf(BORROWER), 100_000e18, "collateral returned");
         assertEq(liquidityVault.totalBorrowed(), 0, "no receivable");
-        assertEq(liquidityVault.availableLiquidity(), 100_000e6, "cash restored");
+        assertEq(liquidityVault.availableLiquidity(), 100_000e6 + interest, "cash includes paid interest");
 
+        uint256 lenderShares = liquidityVault.balanceOf(LENDER);
         vm.prank(LENDER);
-        liquidityVault.withdraw(100_000e6, LENDER, LENDER);
-        assertEq(usdc.balanceOf(LENDER), 100_000e6, "lender fully unwound");
+        liquidityVault.redeem(lenderShares, LENDER, LENDER);
+        assertApproxEq(usdc.balanceOf(LENDER), 100_000e6 + interest, 1, "lender unwound with yield");
     }
 
     /// Scenario B — stale oracle degrades, then disables, borrowing.
