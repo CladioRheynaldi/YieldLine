@@ -16,6 +16,7 @@ async function rpc(method,params=[]) {
 }
 async function send(from,address,abi,functionName,args) {
   const hash=await rpc("eth_sendTransaction",[{from,to:address,data:encodeFunctionData({abi,functionName,args}),gas:"0x4c4b40"}]);
+  await expect.poll(()=>rpc("eth_getTransactionReceipt",[hash])).not.toBeNull();
   const receipt=await rpc("eth_getTransactionReceipt",[hash]);
   expect(receipt.status).toBe("0x1");
   return hash;
