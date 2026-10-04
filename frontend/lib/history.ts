@@ -92,7 +92,9 @@ export async function readHistoryPage(
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (from === to || !/range|too many|limit|response size|exceed/i.test(message)) throw error;
+      const rangeLimit = /range|too many|limit|response size|exceed/i.test(message) &&
+        !/429|rate.?limit|too many requests|quota/i.test(message);
+      if (from === to || !rangeLimit) throw error;
       const middle = (from + to) / 2n;
       await logs(from, middle);
       await logs(middle + 1n, to);

@@ -79,3 +79,10 @@ test("wrong network, changed oracle and invalid rounds have no mock fallback",as
     assert.equal(result.nav,undefined);
   }
 });
+
+test("RPC rate limits stop without multiplying log requests",async()=>{
+  let calls=0;
+  const client={getBlockNumber:async()=>10_000n,getLogs:async()=>{calls++;throw new Error("HTTP 429: rate limit exceeded");}};
+  await assert.rejects(readHistoryPage(client,contracts,account,10n),/429/);
+  assert.equal(calls,2);
+});
