@@ -28,8 +28,8 @@
 
 ## P1 — Strong demo enhancements
 
-- [ ] variable utilization-based APR
-- [ ] interest index
+- [x] variable utilization-based APR — onchain Person 1 implementation
+- [x] interest index — live debt, lender receivables, repayment and settlement
 - [ ] partial collateral withdrawal
 - [ ] transaction history from events
 - [ ] production OpenEden read-only panel
@@ -74,7 +74,7 @@
 ## Research questions
 
 - How should lender withdrawals be queued when most USDC is borrowed?
-- Should deferred liquidations freeze debt interest?
+- Implemented demo decision: interest continues during deferred liquidation; production freeze policies remain research.
 - Who bears NAV movement during the redemption interval?
 - Should settlement factors depend dynamically on queue depth?
 - How should bad debt be allocated?

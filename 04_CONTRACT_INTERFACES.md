@@ -93,16 +93,23 @@ For pre-borrow simulation, either:
 
 ```solidity
 interface IUSDCLiquidityVault {
-    function lendTo(address receiver, uint256 assets) external;
-    function receiveRepayment(uint256 assets) external;
-
+    function accrueInterest() external returns (uint256);
+    function debtForShares(uint256 shares) external view returns (uint256);
+    function sharesForDebt(uint256 assets) external view returns (uint256);
+    function previewRepayment(uint256 shares, uint256 amount)
+        external view returns (uint256 paid, uint256 sharesBurned);
+    function lendTo(address receiver, uint256 assets) external returns (uint256 shares);
+    function recordRepayment(uint256 assets, uint256 sharesBurned) external;
+    function recognizeBadDebt(uint256 sharesBurned) external returns (uint256 loss);
     function availableLiquidity() external view returns (uint256);
     function totalBorrowed() external view returns (uint256);
     function utilizationBps() external view returns (uint256);
+    function borrowRateBps() external view returns (uint256);
+    function supplyRateBps() external view returns (uint256);
 }
 ```
 
-If `receiveRepayment` relies on `transferFrom`, document who must approve whom. Prefer an unambiguous fund flow.
+Borrowers approve the credit vault. It transfers repayment cash into the liquidity vault and then calls `recordRepayment(assets, sharesBurned)`. All three debt-mutating APIs require the credit-vault role. Debt write-offs remove shares, including accrued interest.
 
 ## 6. Credit vault
 
@@ -127,9 +134,11 @@ interface IRWACreditVault {
 
     function borrow(address asset, uint256 amount) external;
 
-    function repay(address asset, uint256 amount) external;
+    function repay(address asset, uint256 amount) external returns (uint256 paid);
 
-    function repayAll(address asset) external;
+    function repayAll(address asset) external returns (uint256 paid);
+
+    function currentDebt(address borrower, address asset) external view returns (uint256);
 
     function initiateLiquidation(address borrower, address asset) external;
 

@@ -102,8 +102,10 @@ contract USDCLiquidityVault is ERC4626, AccessControl, ReentrancyGuard, IUSDCLiq
     {
         uint256 debt = debtForShares(shares);
         if (amount >= debt) return (debt, shares);
-        sharesBurned = Math.mulDiv(amount, DEBT_DENOMINATOR, currentBorrowIndex());
-        paid = debt - debtForShares(shares - sharesBurned);
+        uint256 remainingShares =
+            Math.mulDiv(debt - amount, DEBT_DENOMINATOR, currentBorrowIndex());
+        sharesBurned = shares - remainingShares;
+        paid = debt - debtForShares(remainingShares);
     }
 
     function lendTo(address receiver, uint256 assets)

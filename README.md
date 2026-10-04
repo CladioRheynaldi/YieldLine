@@ -101,6 +101,8 @@ yieldline/
 | `20_DECISIONS_AND_ASSUMPTIONS.md` | Explicit architecture decisions |
 | `21_BACKLOG.md` | Post-MVP extensions |
 | `22_REFERENCES.md` | Primary documentation links |
+| `24_INTEREST_ACCOUNTING.md` | Implemented rates, rounding, lender assets and worked example |
+| `25_INTEREST_TESTING.md` | Interest tests, simulated time and ABI export |
 
 ## Getting started
 
@@ -108,7 +110,7 @@ Prerequisites: Node.js 20+, pnpm, [Foundry](https://getfoundry.sh).
 
 ```bash
 pnpm install
-pnpm test                 # 92 Foundry tests: unit, fuzz, scenarios, invariants
+pnpm test                 # unit, interest, fuzz, scenario and invariant tests
 pnpm abis                 # regenerate packages/shared ABIs from the Foundry build
 ```
 
@@ -137,10 +139,15 @@ Without a deployment the frontend runs on the documented demo scenario and label
 
 ### Implementation status
 
-Build-order phases 1–9 are implemented and tested. Interest accrual is intentionally
-not onchain yet (the Lend page shows the model APR as an estimate), and the
-production-reference panel is still backlog. Testnet deployment (phase 10) needs a
-funded deployer key.
+The original build-order phases 1–9 are implemented. Person 1 adds onchain interest,
+a utilization-based borrow APR, current-debt risk checks, interest-aware ERC-4626
+shares, and accrued-debt settlement. The Lend page still needs Person 2's live-rate
+integration. The production-reference panel remains backlog. Testnet deployment
+needs a funded deployer key and a fresh deployment of these non-upgradeable contracts.
+
+Start with [24_INTEREST_ACCOUNTING.md](24_INTEREST_ACCOUNTING.md) for the worked
+example and [25_INTEREST_TESTING.md](25_INTEREST_TESTING.md) for commands.
+GitHub Actions runs the contracts independently of the frontend.
 
 ## Definition of MVP success
 
@@ -181,3 +188,7 @@ The MVP is complete when a demo user can:
 - optional lightweight indexer after core contracts are finished
 
 See the numbered documents before implementation.
+
+## Source attribution
+
+The original 119 files were imported from [OkToRen/YieldLine](https://github.com/OkToRen/YieldLine) at commit `1b418cc27b05b855cb07ff55780648aa46ff97d2`. Interest accounting changes are developed in this repository. Original file notices are retained.

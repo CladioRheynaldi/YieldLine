@@ -21,16 +21,16 @@ Individual borrowers never call `lendTo` directly.
 ## 3. Core accounting
 
 ```text
-totalAssets
-= available USDC
-+ outstanding performing loans
-+ recognized receivables
-- recognized losses
+totalAssets = available USDC + current aggregate debt receivables
+
+Debt receivables include principal and accrued interest.
+Written-off debt shares are already removed from receivables.
+Do not subtract totalBadDebt again.
 ```
 
 Be careful: vanilla ERC-4626 `totalAssets()` must reflect borrowed assets if vault shares are meant to retain their economic value.
 
-For MVP, define this accounting explicitly.
+The implemented debt-index and rounding rules are defined in [24_INTEREST_ACCOUNTING.md](24_INTEREST_ACCOUNTING.md).
 
 ## 4. Available liquidity
 
@@ -64,7 +64,7 @@ utilization = 60%
 
 ## 6. Borrow rate
 
-MVP option:
+Implemented demo model:
 
 ```text
 base APR = 3%
@@ -76,9 +76,9 @@ base + utilization × slope
 
 These are demo parameters.
 
-Alternative:
+The rate is checkpointed after economic state changes. Interest grows linearly between those checkpoints using a 365-day year, and the current index is carried into the next interval.
 
-Use a fixed borrow APR first. This is acceptable if time is short.
+Permissionless accrual calls do not reset that interval. All borrower and vault reads include current interest.
 
 ## 7. Kink model post-MVP
 
@@ -100,11 +100,11 @@ borrowAPR
 × (1 - reserveFactor)
 ```
 
-For MVP frontend analytics only, this can be estimated offchain as long as core balance accounting is onchain.
+The reserve factor is zero. Onchain `supplyRateBps()` provides this indicative APR; it is not guaranteed realized yield.
 
 ## 9. Interest distribution
 
-Preferred mechanism:
+Implemented mechanism:
 
 Borrow interest increases the economic assets of the ERC-4626 vault, increasing the value of each share.
 
@@ -136,3 +136,7 @@ This is a good teaching point for the workshop.
 - no unauthorized `lendTo`
 - rounding on small deposits
 - full unwind after all loans repaid
+
+## 12. Implementation and testing
+
+See [24_INTEREST_ACCOUNTING.md](24_INTEREST_ACCOUNTING.md) for rates, rounding, fees, fund flows, and a worked example. See [25_INTEREST_TESTING.md](25_INTEREST_TESTING.md) for reproducible tests.

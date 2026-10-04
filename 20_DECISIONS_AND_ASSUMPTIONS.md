@@ -82,6 +82,22 @@
 
 The simulator must be clearly labeled as admin/mock functionality.
 
+## ADR-013 — Shared debt index and checkpointed variable APR
+
+**Decision:** One 27-decimal index, debt shares with 18 extra decimals, a 3% base APR plus an 8% utilization slope, and a 365-day year. Interest is linear within an economic interval and carried forward at economic checkpoints. Public accrual calls do not reset that interval.
+
+**Why:** Borrower and lender debt accounting must share one source of truth, without iterating every loan or allowing checkpoint spam to compound balances.
+
+**Consequence:** Current-debt views include uncheckpointed interest. Pending liquidations continue accruing. Rate reads expose the actual checkpoint rate; indicative supply APR is subject to default.
+
+## ADR-014 — Zero reserve fee and explicit rounding
+
+**Decision:** All recognized interest belongs economically to lender assets. There is no fee allocation in the demo. Full repayment clears all debt shares; losses remove the same shares from aggregate receivables.
+
+**Why:** Avoid artificial assets, duplicate interest recognition, and borrower debt dust.
+
+**Consequence:** Aggregate and individual debt rounding can differ by bounded micro-USDC dust. Existing contracts require redeployment. See [24_INTEREST_ACCOUNTING.md](24_INTEREST_ACCOUNTING.md).
+
 ## Assumptions
 
 MVP assumptions:

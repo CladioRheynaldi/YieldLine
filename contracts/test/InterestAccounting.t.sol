@@ -296,8 +296,7 @@ contract InterestAccountingTest is YieldLineFixture {
         amount = bound(amount, 2, 50_000e6);
         uint256 assetsBefore = liquidityVault.totalAssets();
         uint256 paid = _pay(amount);
-        assertLe(paid, amount, "never exceeds payment maximum");
-        assertLe(amount - paid, 1, "at most one unit unused");
+        assertEq(paid, amount, "requested partial payment exactly retires rounded debt");
         assertEq(_debt(), beforeDebt - paid, "every paid unit retires debt");
         assertEq(liquidityVault.totalAssets(), assetsBefore, "no ghost assets on payment");
     }
