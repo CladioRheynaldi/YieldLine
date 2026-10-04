@@ -7,6 +7,8 @@ export function ModeNotice({ view }: { view: ProtocolView }) {
   let message: string | null = null;
   if (view.mode === "demo") {
     message = `Demo snapshot · no ${chain.name} deployment is configured, so values show the documented scenario.`;
+  } else if (view.readError) {
+    message = view.readError;
   } else if (!view.account) {
     message = `Live ${chain.name} data · connect a wallet to see and manage your position.`;
   } else if (!view.connected) {
@@ -17,7 +19,7 @@ export function ModeNotice({ view }: { view: ProtocolView }) {
   if (!message) return null;
 
   return (
-    <p className="mode-notice" data-mode={view.mode} role="status">
+    <p className="mode-notice" data-mode={view.mode} role={view.readError ? "alert" : "status"}>
       <span className="status-dot" aria-hidden="true" />
       {message}
     </p>

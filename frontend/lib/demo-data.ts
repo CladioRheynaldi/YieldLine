@@ -31,6 +31,7 @@ export const demoView: ProtocolView = {
     effectiveValue: "$89,775.00",
     borrowCapacity: "$67,331.25",
     debt: "$50,000.00",
+    accruedInterest: "$0.00",
     availableBorrow: "$17,331.25",
     liquidationCapacity: "$73,615.50",
     healthFactor: "1.4723",

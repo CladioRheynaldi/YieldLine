@@ -41,8 +41,8 @@ const presets: Preset[] = [
 const STATUS = ["No position", "Active", "Liquidation pending", "Closed"];
 
 /** Oracle timestamp for a backdated update; only called from click handlers. */
-function timestampHoursAgo(hours: number): bigint {
-  return BigInt(Math.floor(Date.now() / 1000) - hours * 3600);
+function timestampHoursAgo(hours: number, chainTimestamp: bigint): bigint {
+  return chainTimestamp - BigInt(hours * 3600);
 }
 
 function Card({ title, role, children }: { title: string; role: string; children: ReactNode }) {
@@ -126,7 +126,7 @@ export function AdminView() {
             address: d!.mockOracle,
             abi: mockOracleAbi,
             functionName: "setPrice",
-            args: [d!.mockTBILL, price, timestampHoursAgo(age)],
+            args: [d!.mockTBILL, price, timestampHoursAgo(age, view.raw!.chainTimestamp)],
           },
     );
     return steps;

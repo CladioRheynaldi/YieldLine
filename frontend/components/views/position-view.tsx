@@ -3,6 +3,8 @@
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
+import { BorrowerInterest } from "@/components/borrower-interest";
+import { TransactionHistory } from "@/components/transaction-history";
 import { Metric } from "@/components/metric";
 import { ModeNotice } from "@/components/mode-notice";
 import { PageHeading } from "@/components/page-heading";
@@ -39,7 +41,7 @@ export function PositionView() {
 
       <section className="metrics-strip">
         <Metric label="Collateral" value={position.collateral} detail={position.rawValue} />
-        <Metric label="Debt" value={position.debt} detail="MockUSDC principal" />
+        <Metric label="Debt" value={position.debt} detail="Principal + accrued interest" />
         <Metric
           label="Borrow capacity"
           value={position.borrowCapacity}
@@ -74,6 +76,8 @@ export function PositionView() {
         </div>
         <RiskTable />
       </section>
+      <BorrowerInterest view={view} />
+      <TransactionHistory account={view.account} kind="borrower" />
     </div>
   );
 }

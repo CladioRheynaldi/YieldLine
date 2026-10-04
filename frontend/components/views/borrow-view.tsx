@@ -2,6 +2,7 @@
 
 import { creditVaultAbi } from "@yieldline/shared";
 
+import { TxButton } from "@/components/tx-button";
 import { ActionForm } from "@/components/action-form";
 import { Metric } from "@/components/metric";
 import { ModeNotice } from "@/components/mode-notice";
@@ -82,6 +83,17 @@ export function BorrowView() {
 
       <RiskBridge />
 
+      <section className="plain-panel">
+        <h2>Repay the entire current debt</h2>
+        <p className="field-message">Debt grows while wallet approvals are pending. This action approves up to your current MockUSDC balance and calls repayAll, which collects only the debt owed when mined. Keep some extra MockUSDC for interest accrued during confirmation.</p>
+        <TxButton
+          disabledReason={gate ?? (!raw?.debt ? "There is no debt to repay." : raw.usdcBalance <= raw.debt ? "Fund slightly more MockUSDC than the current debt to cover ongoing interest." : null)}
+          steps={() => withApproval(d!.mockUSDC, d!.creditVault, raw!.usdcBalance, raw!.usdcAllowanceCredit, "MockUSDC", {
+            label: "Repay all current debt", address: d!.creditVault,
+            abi: creditVaultAbi, functionName: "repayAll", args: [d!.mockTBILL],
+          })}
+        >Approve balance &amp; repay all</TxButton>
+      </section>
       <section className="action-grid">
         <ActionForm
           title="Deposit collateral"

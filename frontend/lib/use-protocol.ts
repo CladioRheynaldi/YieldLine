@@ -11,8 +11,9 @@ import {
   registryAbi,
 } from "@yieldline/shared";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { keccak256, toBytes, zeroAddress, type Address } from "viem";
-import { useConnection, useReadContracts } from "wagmi";
+import { useConnection, useReadContract, useReadContracts, usePublicClient } from "wagmi";
 
 import { demoView } from "./demo-data";
 import {
@@ -33,6 +34,7 @@ export type PositionStage = "NONE" | "ACTIVE" | "WARNING" | "LIQUIDATION_PENDING
 export type ProtocolView = {
   mode: "demo" | "live";
   loading: boolean;
+  readError?: string | null;
   connected: boolean;
   account: Address | undefined;
   market: {
@@ -60,6 +62,7 @@ export type ProtocolView = {
     effectiveValue: string;
     borrowCapacity: string;
     debt: string;
+    accruedInterest: string;
     availableBorrow: string;
     liquidationCapacity: string;
     healthFactor: string;
@@ -102,6 +105,8 @@ export type RawState = {
   liquidatable: boolean;
   collateral: bigint;
   debt: bigint;
+  shareValue: bigint;
+  chainTimestamp: bigint;
   status: number;
   borrowCapacity: bigint;
   liquidationCapacity: bigint;
@@ -142,19 +147,21 @@ export function useNow(): number | null {
   return now;
 }
 
-// Demo borrow APR model from 10_LIQUIDITY_VAULT.md. Interest does not accrue onchain in the MVP.
-function estimateAprs(utilizationBps: bigint) {
-  const utilization = Number(utilizationBps) / 10_000;
-  const borrow = 0.03 + utilization * 0.08;
-  return { borrow: borrow * 100, supply: borrow * utilization * 100 };
-}
-
 export function useProtocol(): ProtocolView {
   const { address, isConnected, chainId } = useConnection();
-  const now = useNow();
+  const client = usePublicClient({ chainId: chain.id });
+  const clock = useQuery({
+    queryKey: ["protocol-clock", chain.id],
+    queryFn: () => client!.getBlock(),
+    enabled: Boolean(deployment && client),
+    refetchInterval: 10_000,
+    retry: 1,
+  });
+  const blockNumber = clock.data?.number ?? undefined;
+  const now = clock.data ? Number(clock.data.timestamp) : null;
   const d = deployment;
   const account = address ?? zeroAddress;
-  const enabled = Boolean(d);
+  const enabled = Boolean(d && blockNumber !== undefined);
   const query = { enabled, refetchInterval: 10_000 };
   const contracts = d ?? {
     mockTBILL: zeroAddress,
@@ -170,6 +177,7 @@ export function useProtocol(): ProtocolView {
 
   const market = useReadContracts({
     allowFailure: false,
+    blockNumber,
     query,
     contracts: [
       { address: contracts.registry, abi: registryAbi, functionName: "getAssetConfig", args: [tbill], chainId: chain.id },
@@ -181,6 +189,10 @@ export function useProtocol(): ProtocolView {
       { address: contracts.liquidityVault, abi: liquidityVaultAbi, functionName: "totalBadDebt", chainId: chain.id },
       { address: contracts.creditVault, abi: creditVaultAbi, functionName: "paused", chainId: chain.id },
       { address: contracts.liquidityVault, abi: liquidityVaultAbi, functionName: "totalSupply", chainId: chain.id },
+      { address: contracts.liquidityVault, abi: liquidityVaultAbi, functionName: "borrowRateBps", chainId: chain.id },
+      { address: contracts.liquidityVault, abi: liquidityVaultAbi, functionName: "supplyRateBps", chainId: chain.id },
+      { address: contracts.liquidityVault, abi: liquidityVaultAbi, functionName: "rateAnchorIndex", chainId: chain.id },
+      { address: contracts.liquidityVault, abi: liquidityVaultAbi, functionName: "DEBT_DENOMINATOR", chainId: chain.id },
     ],
   });
 
@@ -198,11 +210,14 @@ export function useProtocol(): ProtocolView {
       { address: contracts.liquidityVault, abi: liquidityVaultAbi, functionName: "balanceOf", args: [account], chainId: chain.id },
       { address: contracts.liquidityVault, abi: liquidityVaultAbi, functionName: "maxWithdraw", args: [account], chainId: chain.id },
       { address: contracts.complianceRegistry, abi: complianceRegistryAbi, functionName: "isEligible", args: [tbill, account], chainId: chain.id },
+      { address: contracts.creditVault, abi: creditVaultAbi, functionName: "debtShares", args: [account, tbill], chainId: chain.id },
+      { address: contracts.creditVault, abi: creditVaultAbi, functionName: "currentDebt", args: [account, tbill], chainId: chain.id },
     ],
   });
 
   const roles = useReadContracts({
     allowFailure: false,
+    blockNumber,
     query: { ...query, enabled: enabled && Boolean(address) },
     contracts: [
       { address: contracts.mockOracle, abi: mockOracleAbi, functionName: "hasRole", args: [ROLES.oracleUpdater, account], chainId: chain.id },
@@ -214,25 +229,34 @@ export function useProtocol(): ProtocolView {
     ],
   });
 
+  const shareRead = useReadContract({
+    address: contracts.liquidityVault, abi: liquidityVaultAbi,
+    functionName: "convertToAssets", args: [user.data?.[7] ?? 0n],
+    blockNumber, chainId: chain.id,
+    query: { ...query, enabled: enabled && Boolean(user.data) },
+  });
   const connected = isConnected && chainId === chain.id;
 
   if (!d) return { ...demoView, connected, account: address };
 
-  const loading = !market.data || !user.data;
+  const error = clock.error || market.error || user.error || shareRead.error;
+  const readError = error ? "Protocol reads failed. Check the RPC and redeploy the latest contracts if these addresses use an older ABI." : null;
+  const loading = !readError && (!market.data || !user.data || shareRead.data === undefined);
   const [oracleUpdater, complianceAdmin, riskAdmin, protocolAdmin, liquidationOperator, minter] =
     roles.data ?? [false, false, false, false, false, false];
   const roleView = { oracleUpdater, complianceAdmin, riskAdmin, protocolAdmin, liquidationOperator, minter };
 
-  if (loading) {
-    return { ...placeholderView, loading: true, connected, account: address, roles: roleView };
+  if (loading || readError || !market.data || !user.data || shareRead.data === undefined) {
+    return { ...placeholderView, loading, readError, connected, account: address, roles: roleView };
   }
 
-  const [config, price, totalAssets, available, borrowed, utilizationBps, badDebt, paused, totalShares] =
+  const [config, price, totalAssets, available, borrowed, utilizationBps, badDebt, paused, , borrowRate, supplyRate, anchorIndex, debtDenominator] =
     market.data;
-  const [position, risk, tbillBalance, usdcBalance, tbillAllowance, usdcAllowanceCredit, usdcAllowancePool, shares, maxWithdraw, eligible] =
+  const [position, risk, tbillBalance, usdcBalance, tbillAllowance, usdcAllowanceCredit, usdcAllowancePool,  , maxWithdraw, eligible, positionShares, currentDebt] =
     user.data;
-  // ERC-4626 convertToAssets with the vault's 3-decimal virtual offset.
-  const shareValue = (shares * (totalAssets + 1n)) / (totalShares + 1000n);
+  const shareValue = shareRead.data;
+  const anchorDebt = (positionShares * anchorIndex + debtDenominator - 1n) / debtDenominator;
+  const intervalInterest = currentDebt > anchorDebt ? currentDebt - anchorDebt : 0n;
 
   const age = now === null || price.updatedAt === 0n ? null : Math.max(0, now - Number(price.updatedAt));
   const hardStale = age !== null && age >= config.hardStaleAge;
@@ -270,7 +294,7 @@ export function useProtocol(): ProtocolView {
             : STATUS_LABELS[position.status] ?? "Unknown";
 
   const headroom = risk.borrowCapacity > risk.debtValue ? risk.borrowCapacity - risk.debtValue : 0n;
-  const aprs = estimateAprs(utilizationBps);
+
 
   return {
     mode: "live",
@@ -301,7 +325,8 @@ export function useProtocol(): ProtocolView {
       rawValue: connected ? formatUsdWad(risk.rawCollateralValue) : dash,
       effectiveValue: connected ? formatUsdWad(risk.effectiveCollateralValue) : dash,
       borrowCapacity: connected ? formatUsdWad(risk.borrowCapacity) : dash,
-      debt: connected ? formatUsdc(position.debtAmount) : dash,
+      debt: connected ? formatUsdc(currentDebt) : dash,
+      accruedInterest: connected ? formatUsdc(intervalInterest) : dash,
       availableBorrow: connected ? formatUsdc(wadToUsdcFloor(headroom)) : dash,
       liquidationCapacity: connected ? formatUsdWad(risk.liquidationCapacity) : dash,
       healthFactor: connected && hasDebt ? formatHealthFactor(risk.healthFactor) : dash,
@@ -314,8 +339,8 @@ export function useProtocol(): ProtocolView {
       availableLiquidity: formatUsdc(available),
       borrowed: formatUsdc(borrowed),
       utilization: formatBps(utilizationBps),
-      borrowApr: `${aprs.borrow.toFixed(2)}% model`,
-      supplyApr: `${aprs.supply.toFixed(2)}% model`,
+      borrowApr: formatBps(borrowRate),
+      supplyApr: formatBps(supplyRate),
       badDebt: formatUsdc(badDebt),
     },
     wallet: {
@@ -339,7 +364,9 @@ export function useProtocol(): ProtocolView {
           canBorrow: risk.canBorrow,
           liquidatable: risk.liquidatable,
           collateral: position.collateralAmount,
-          debt: position.debtAmount,
+          debt: currentDebt,
+          shareValue,
+          chainTimestamp: clock.data!.timestamp,
           status: position.status,
           borrowCapacity: risk.borrowCapacity,
           liquidationCapacity: risk.liquidationCapacity,
@@ -382,6 +409,7 @@ const placeholderView: ProtocolView = {
     effectiveValue: dash,
     borrowCapacity: dash,
     debt: dash,
+    accruedInterest: dash,
     availableBorrow: dash,
     liquidationCapacity: dash,
     healthFactor: dash,

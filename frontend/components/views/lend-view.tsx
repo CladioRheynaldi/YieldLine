@@ -3,6 +3,8 @@
 import { liquidityVaultAbi } from "@yieldline/shared";
 
 import { ActionForm } from "@/components/action-form";
+import { LenderAnalytics } from "@/components/lender-analytics";
+import { TransactionHistory } from "@/components/transaction-history";
 import { Metric } from "@/components/metric";
 import { ModeNotice } from "@/components/mode-notice";
 import { PageHeading } from "@/components/page-heading";
@@ -30,7 +32,7 @@ export function LendView() {
       <section className="metrics-strip">
         <Metric label="Vault assets" value={pool.totalSupplied} detail="Cash + receivables" />
         <Metric label="Available now" value={pool.availableLiquidity} detail="Immediate withdrawals" />
-        <Metric label="Borrowed" value={pool.borrowed} detail="Outstanding principal" />
+        <Metric label="Borrowed" value={pool.borrowed} detail="Principal + accrued interest" />
         <Metric label="Utilization" value={pool.utilization} detail="Borrowed ÷ vault assets" />
       </section>
 
@@ -97,16 +99,18 @@ export function LendView() {
             YieldLine reports vault assets and immediately available cash separately.
           </p>
           <dl className="key-values">
-            <div><dt>Borrow APR (model)</dt><dd>{pool.borrowApr}</dd></div>
-            <div><dt>Supply APR (model)</dt><dd>{pool.supplyApr}</dd></div>
+            <div><dt>Borrow APR (contract)</dt><dd>{pool.borrowApr}</dd></div>
+            <div><dt>Indicative supply APR (contract)</dt><dd>{pool.supplyApr}</dd></div>
             <div><dt>Recognized bad debt</dt><dd>{pool.badDebt}</dd></div>
           </dl>
           <p className="field-message">
-            APRs follow the 3% + utilization × 8% demo model. Interest does not accrue onchain in
-            this MVP.
+            Rates come from the contracts. Borrow APR is checkpointed after pool activity;
+            supply APR is indicative. Earned receivables may be written off if a borrower defaults.
           </p>
         </div>
       </section>
+      <LenderAnalytics view={view} />
+      <TransactionHistory account={view.account} kind="lender" />
     </div>
   );
 }

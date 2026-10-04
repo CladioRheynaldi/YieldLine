@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import type { Abi, Address, Hash } from "viem";
 import { useConfig, useConnection } from "wagmi";
-import { simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { getAccount, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 
 import { describeError, protocolErrorsAbi } from "./errors";
 import { chain } from "./network";
@@ -39,9 +39,17 @@ export function useTx() {
         setState({ status: "error", message: "Connect a wallet first." });
         return false;
       }
+      if (!steps.length) {
+        setState({ status: "error", message: "No transaction steps were provided." });
+        return false;
+      }
       let hash: Hash | undefined;
       try {
         for (const [index, step] of steps.entries()) {
+          hash = undefined;
+          const active = getAccount(config);
+          if (active.address?.toLowerCase() !== address.toLowerCase()) throw new Error("Wallet account changed. Restart the action.");
+          if (active.chainId !== chain.id) throw new Error("Wallet network changed. Switch to the configured demo network and retry.");
           const base = { label: step.label, step: index + 1, total: steps.length };
           setState({ status: "signing", ...base });
           const { request } = await simulateContract(config, {

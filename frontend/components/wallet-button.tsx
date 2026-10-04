@@ -13,14 +13,14 @@ export function WalletButton() {
 
   if (account.isConnected && account.chainId !== chain.id) {
     return (
-      <button
+      <div className="wallet-control"><button
         className="button button--primary"
         disabled={switchChain.isPending}
         onClick={() => switchChain.mutate({ chainId: chain.id })}
         type="button"
       >
         {switchChain.isPending ? "Switching…" : `Switch to ${chain.name}`}
-      </button>
+      </button>{switchChain.error ? <span className="wallet-control__error" role="alert">Network switch was rejected or failed. Select the demo network in your wallet and retry.</span> : null}</div>
     );
   }
 

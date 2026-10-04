@@ -9,6 +9,7 @@ import type { TxStep } from "./use-tx";
 /** Why writes are unavailable right now, or null when the wallet can transact. */
 export function writeGate(view: ProtocolView): string | null {
   if (view.mode === "demo") return "Demo snapshot — deploy the contracts to submit transactions.";
+  if (view.readError) return view.readError;
   if (!view.account) return "Connect a wallet to submit transactions.";
   if (!view.connected) return `Switch the wallet to ${chain.name} to submit.`;
   if (view.loading || !view.raw) return "Loading onchain state…";

@@ -1,5 +1,6 @@
 "use client";
 
+import { OpenEdenReference } from "@/components/openeden-reference";
 import { ModeNotice } from "@/components/mode-notice";
 import { PageHeading } from "@/components/page-heading";
 import { chain, deployment, explorerAddressUrl } from "@/lib/network";
@@ -75,14 +76,7 @@ export function MarketsView() {
         </dl>
       </section>
 
-      <section className="reference-note">
-        <h2>Production reference path</h2>
-        <p>
-          An OpenEden TBILL panel may be added as a separate, read-only Arbitrum One source after
-          its current address and ABI are re-verified. It must never be merged visually with this
-          workshop position.
-        </p>
-      </section>
+      <OpenEdenReference />
     </div>
   );
 }

@@ -42,10 +42,13 @@ const contractKeys: ContractKey[] = [
 ];
 
 export function isLiveDeployment(record: DeploymentRecord | null): record is LiveDeployment {
-  return Boolean(record && contractKeys.every((key) => record[key]));
+  return Boolean(record && record.deploymentBlock !== null && record.deploymentBlock >= 0n &&
+    contractKeys.every(key => /^0x[0-9a-fA-F]{40}$/.test(record[key] ?? "") &&
+      record[key] !== "0x0000000000000000000000000000000000000000"));
 }
 
 export function getLiveDeployment(network: YieldLineNetwork): LiveDeployment | null {
   const record = deploymentRecords[network];
-  return isLiveDeployment(record) ? record : null;
+  const expectedChainId = network === "anvil" ? 31337 : 421614;
+  return isLiveDeployment(record) && record.chainId === expectedChainId ? record : null;
 }
