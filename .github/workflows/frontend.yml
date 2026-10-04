@@ -59,7 +59,7 @@ jobs:
       - name: Browser failure details
         if: failure()
         run: |
-          find frontend/tests/browser/test-results -name error-context.md -print -exec cat {} \\\;
+          find frontend/tests/browser/test-results -name error-context.md -print -exec cat {} +
       - name: Mobile screenshot for review
         if: always()
         run: |

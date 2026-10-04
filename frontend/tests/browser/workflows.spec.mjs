@@ -29,7 +29,7 @@ const usd=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}
 let accounts;
 let snapshot;
 test.beforeEach(async()=>{accounts=await rpc("eth_accounts");snapshot=await rpc("evm_snapshot");});
-test.afterEach(async()=>{await rpc("evm_revert",[snapshot]);});
+test.afterEach(async({page},info)=>{if(info.status!=="passed") console.log("BROWSER_FAILURE_CONTEXT\n"+await page.locator("body").innerText()); await rpc("evm_revert",[snapshot]);});
 
 async function wallet(page,index=1,wrongNetwork=false) {
   await page.exposeFunction("__walletRpc",async(method,params)=> {
