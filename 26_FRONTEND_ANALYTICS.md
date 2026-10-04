@@ -85,7 +85,7 @@ For Anvil use `NEXT_PUBLIC_YIELDLINE_NETWORK=anvil`, `NEXT_PUBLIC_ANVIL_RPC_URL=
 
 ## 8. Verification
 
-CI installs Node 24, pinned pnpm and Foundry. It runs analytics/reference unit tests, TypeScript, lint, a production build, an isolated Anvil deployment and Chromium browser workflows. Browser tests use an injected EIP-1193 test wallet with real Anvil transactions; they do not automate the MetaMask extension.
+CI installs Node 24, pinned pnpm and Foundry. It runs analytics/reference unit tests, TypeScript, lint, a production build, an isolated Anvil deployment and Chromium browser workflows. Browser tests use an injected EIP-1193 test wallet with real Anvil transactions and explicit test-wallet gas headroom; they do not automate the MetaMask extension.
 
 ```bash
 pnpm install --frozen-lockfile

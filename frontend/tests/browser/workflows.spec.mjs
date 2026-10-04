@@ -52,6 +52,9 @@ async function wallet(page,index=1,wrongNetwork=false) {
         if(method==="wallet_revokePermissions")return null;
         if(method==="eth_sendTransaction"&&state.rejectSend){state.rejectSend=false;throw Object.assign(new Error("User rejected the request."),{code:4001});}
         if(method==="eth_sendTransaction"&&state.failSend){state.failSend=false;throw Object.assign(new Error("Transaction broadcast failed."),{code:-32000});}
+        // Match the gas headroom a wallet normally applies. Accrual storage writes
+        // can grow between estimation and the next mined timestamp on Anvil.
+        if(method==="eth_sendTransaction") params=[{...params[0],gas:"0x4c4b40"},...params.slice(1)];
         const answer=await window.__walletRpc(method,params);
         if(answer.error)throw Object.assign(new Error(answer.error.message),{code:answer.error.code});
         return answer.result;
